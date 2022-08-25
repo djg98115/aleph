@@ -5,19 +5,18 @@ open Microsoft.VisualStudio.TestTools.UnitTesting
 open aleph.parser.ast
 open aleph.parser.TypeChecker
 open aleph.runtime.Eval
-open aleph.runtime.qpu.classic
 
 open aleph.tests.Utils
 
 [<TestClass>]
 (*
     These test take an untyped quantum (ket) expression, and
-    prepares the simulator with the resulting Ket; they
+    prepares the classical processor with the resulting Ket; they
     then verify that the quantum state and the returned columns
     from the preparation matches some expected values.
 *)
 type TestSimulator () =
-    member this.Context = { ClassicValueContext.ctx with qpu = Simulator() }
+    member this.Context = { ClassicValueContext.ctx with qpu = aleph.runtime.qpu.classic.Processor() }
 
     [<TestMethod>]
     member this.TestBasicExpressions () =
@@ -565,11 +564,11 @@ type TestSimulator () =
         |> List.iter (verify_expression ctx)
 
 
-    member this.TestExpression (ctx: ValueContext) (e, state, columns)=
+    member this.TestExpression (ctx: EvalContext) (e, state, columns)=
         let qpu = ctx.qpu
         // If it is not already a Prepare expression, wrap in Prepare...
         let e = 
-            match typecheck(e, ctx.types) with
+            match typecheck(e, ctx.typeCtx) with
             | Ok (result, _) ->
                 match result with 
                 | typed.E.Universe (_, UType.Universe _) -> e
@@ -580,7 +579,7 @@ type TestSimulator () =
                 e
         match run(e, ctx) with
         | Ok (Universe universe, ctx) ->
-            let universe = universe :?> Universe
+            let universe = universe :?> aleph.runtime.qpu.classic.Universe
             let state' = universe.State
             let columns' = universe.Columns
             printfn "columns: %A\nmemory: %A\n" columns' state'
@@ -605,6 +604,6 @@ type TestSimulator () =
     member this.AddToContext id t e ctx =
         match run (e, ctx) with
         | Ok (v, ctx) ->
-            { ctx with heap = ctx.heap.Add (id, v); types = ctx.types.Add(id, t)  }
+            { ctx with heap = ctx.heap.Add (id, v); typeCtx = ctx.typeCtx.Add(id, t)  }
         | Error msg ->
             failwith msg

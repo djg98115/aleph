@@ -36,9 +36,10 @@ of each prepare method below...
 *)
 
 
-type Memory = {
+type QuantumContext = {
     allocations: Map<int, int list>
     state: Value list list
+    evalCtx: EvalContext
 }
 
 type Universe(state: Value list list, columns: int list) =
@@ -48,10 +49,8 @@ type Universe(state: Value list list, columns: int list) =
     member val State = state with get,set
     member this.Columns = columns
 
-type Simulator() =
+type Processor() =
     let random = System.Random()
-
-    let mutable memory = { allocations = Map.empty; state = [] }
 
     (* 
         Preparing a Ket consists of first checking if the Ket is already allocated
@@ -59,15 +58,15 @@ type Simulator() =
         otherwise, it prepares the state of the Ket's state prep expression
         and allocates in memory the columns returned by the state prep to this ket.
      *)
-    let rec prepare_ket (ket : Ket, ctx: ValueContext) =
-        match memory.allocations.TryFind ket.Id with
+    let rec prepare_ket (ket : Ket, ctx: QuantumContext) =
+        match ctx.allocations.TryFind ket.Id with
         | Some columns -> 
             (columns, ctx) |> Ok        // Already prepared...
         | None ->
             prepare (ket.StatePrep, ctx)
             ==> fun (columns, ctx) ->
                 // Assign to the ket the columns returned by the preparation:
-                memory <- { memory with allocations = memory.allocations.Add (ket.Id, columns) }
+                let ctx = { ctx with allocations = ctx.allocations.Add (ket.Id, columns) }
                 (columns, ctx) |> Ok
 
     (*
@@ -110,7 +109,7 @@ type Simulator() =
         this method returns the columns associated with the ket accordingly.
      *)
     and prepare_var (id, ctx) =
-        match ctx.heap.TryFind id with
+        match ctx.evalCtx.heap.TryFind id with
         | Some (Value.Ket ket) ->
             prepare_ket (ket, ctx)
             ==> fun (columns, ctx) ->
@@ -125,30 +124,30 @@ type Simulator() =
         It returns the columns allocated for the new values.
      *)
     and prepare_literal (values, ctx) =
-        eval_classic(values, ctx)
-        ==> fun (values, ctx) ->
+        eval_classic(values, ctx.evalCtx)
+        ==> fun (values, evalCtx) ->
             match values with
             | Value.Set values ->
-                let old_size = if memory.state.IsEmpty then 0 else memory.state.Head.Length
-                let new_state = tensor_product memory.state (values |> Set.toList)
+                let old_size = if ctx.state.IsEmpty then 0 else ctx.state.Head.Length
+                let new_state = tensor_product ctx.state (values |> Set.toList)
                 let new_size = if new_state.IsEmpty then 0 else new_state.Head.Length
                 let new_columns = [ old_size .. new_size - 1 ]
-                memory <- { memory with state = new_state }
+                let ctx = { ctx with state = new_state; evalCtx = evalCtx }
                 (new_columns, ctx) |> Ok
             | _ -> 
                 $"Invalid classic value for a ket literal: {values}" |> Error
 
     and prepare_ketall (size, ctx) =
-        eval_classic (size, ctx)
-        ==> fun (size, ctx) ->
+        eval_classic (size, ctx.evalCtx)
+        ==> fun (size, evalCtx) ->
             match size with
             | Value.Int i ->
                 let values = seq { 0 .. (int(2.0 ** i)) - 1} |> Seq.map (Value.Int) |> Seq.toList
-                let old_size = if memory.state.IsEmpty then 0 else memory.state.Head.Length
-                let new_state = tensor_product memory.state values
+                let old_size = if ctx.state.IsEmpty then 0 else ctx.state.Head.Length
+                let new_state = tensor_product ctx.state values
                 let new_size = if new_state.IsEmpty then 0 else new_state.Head.Length
                 let new_columns = [ old_size .. new_size - 1 ]
-                memory <- { memory with state = new_state }
+                let ctx = { ctx with state = new_state; evalCtx = evalCtx }
                 (new_columns, ctx) |> Ok
             | _ -> 
                 $"Invalid ket_all size, expected int got: {size}" |> Error
@@ -164,10 +163,10 @@ type Simulator() =
             ==> fun (right, ctx) ->
                 match (left, right) with
                 | ([l], [r]) ->
-                    let mem_size = memory.state.Head.Length
+                    let mem_size = ctx.state.Head.Length
                     let new_columns = [ mem_size ] // last column
-                    let new_state = seq { for row in memory.state do row @ [ row.[l] + row.[r] ] } |> Seq.toList
-                    memory <- { memory with state = new_state }
+                    let new_state = seq { for row in ctx.state do row @ [ row.[l] + row.[r] ] } |> Seq.toList
+                    let ctx = { ctx with state = new_state }
                     (new_columns, ctx) |> Ok
                 | _ -> 
                     $"Invalid inputs for ket addition: {left} + {right}" |> Error
@@ -184,10 +183,10 @@ type Simulator() =
             ==> fun (right, ctx) ->
                 match (left, right) with
                 | ([l], [r]) ->
-                    let mem_size = memory.state.Head.Length
+                    let mem_size = ctx.state.Head.Length
                     let new_columns = [ mem_size ] // last column
-                    let new_state = seq { for row in memory.state do row @ [ row.[l] * row.[r] ] } |> Seq.toList
-                    memory <- { memory with state = new_state }
+                    let new_state = seq { for row in ctx.state do row @ [ row.[l] * row.[r] ] } |> Seq.toList
+                    let ctx = { ctx with state = new_state }
                     (new_columns, ctx) |> Ok
                 | _ -> 
                     $"Invalid inputs for ket addition: {left} + {right}" |> Error
@@ -207,10 +206,11 @@ type Simulator() =
     and prepare_index (q, index, ctx) =
         prepare (q, ctx)
         ==> fun (columns, ctx) ->
-            eval_classic (index, ctx)
-            ==> fun (index, ctx) ->
+            eval_classic (index, ctx.evalCtx)
+            ==> fun (index, evalCtx) ->
                 match index with
                 | Value.Int i ->
+                    let ctx = { ctx with evalCtx = evalCtx }
                     let idx = i % columns.Length
                     ([columns.[idx]], ctx) |> Ok
                 | _ -> $"Invalid index, expecting int value, got {index}" |> Error
@@ -235,10 +235,10 @@ type Simulator() =
         ==> fun (columns, ctx) ->
             match columns with
             | [v] ->
-                let mem_size = memory.state.Head.Length
+                let mem_size = ctx.state.Head.Length
                 let new_columns = [ mem_size ] // last column
-                let new_state = seq { for row in memory.state do row @ [ (Value.Not row.[v]) ] } |> Seq.toList
-                memory <- { memory with state = new_state }
+                let new_state = seq { for row in ctx.state do row @ [ (Value.Not row.[v]) ] } |> Seq.toList
+                let ctx = { ctx with state = new_state }
                 (new_columns, ctx) |> Ok
             | _ -> 
                 $"Invalid inputs for ket not: {q}" |> Error
@@ -255,10 +255,10 @@ type Simulator() =
             ==> fun (right, ctx) ->
                 match (left, right) with
                 | ([l], [r]) ->
-                    let mem_size = memory.state.Head.Length
+                    let mem_size = ctx.state.Head.Length
                     let new_columns = [ mem_size ] // last column
-                    let new_state = seq { for row in memory.state do row @ [ Value.And (row.[l], row.[r]) ] } |> Seq.toList
-                    memory <- { memory with state = new_state }
+                    let new_state = seq { for row in ctx.state do row @ [ Value.And (row.[l], row.[r]) ] } |> Seq.toList
+                    let ctx = { ctx with state = new_state }
                     (new_columns, ctx) |> Ok
                 | _ -> 
                     $"Invalid inputs for ket equals: {left} && {right}" |> Error
@@ -275,10 +275,10 @@ type Simulator() =
             ==> fun (right, ctx) ->
                 match (left, right) with
                 | ([l], [r]) ->
-                    let mem_size = memory.state.Head.Length
+                    let mem_size = ctx.state.Head.Length
                     let new_columns = [ mem_size ] // last column
-                    let new_state = seq { for row in memory.state do row @ [ Value.Or(row.[l], row.[r])      ] } |> Seq.toList
-                    memory <- { memory with state = new_state }
+                    let new_state = seq { for row in ctx.state do row @ [ Value.Or(row.[l], row.[r])      ] } |> Seq.toList
+                    let ctx = { ctx with state = new_state }
                     (new_columns, ctx) |> Ok
                 | _ -> 
                     $"Invalid inputs for ket equals: {left} && {right}" |> Error
@@ -295,10 +295,10 @@ type Simulator() =
             ==> fun (right, ctx) ->
                 match (left, right) with
                 | ([l], [r]) ->
-                    let mem_size = memory.state.Head.Length
+                    let mem_size = ctx.state.Head.Length
                     let new_columns = [ mem_size ] // last column
-                    let new_state = seq { for row in memory.state do row @ [ row.[l] == row.[r] ] } |> Seq.toList
-                    memory <- { memory with state = new_state }
+                    let new_state = seq { for row in ctx.state do row @ [ row.[l] == row.[r] ] } |> Seq.toList
+                    let ctx = { ctx with state = new_state }
                     (new_columns, ctx) |> Ok
                 | _ -> 
                     $"Invalid inputs for ket equals: {left} == {right}" |> Error
@@ -312,8 +312,8 @@ type Simulator() =
         ==> fun (cond, ctx) ->
             prepare (ket, ctx)
             ==> fun (ket, ctx) ->
-                let new_state = List.filter (fun (r : Value list) -> r.[cond.Head] = (Bool true)) memory.state
-                memory <- { memory with state = new_state }
+                let new_state = List.filter (fun (r : Value list) -> r.[cond.Head] = (Bool true)) ctx.state
+                let ctx = { ctx with state = new_state }
                 (ket, ctx) |> Ok
 
     (*
@@ -329,10 +329,10 @@ type Simulator() =
                 ==> fun (else_q, ctx) ->
                     match cond, then_q, else_q with
                     | [c], [t], [e] ->
-                        let mem_size = memory.state.Head.Length
+                        let mem_size = ctx.state.Head.Length
                         let new_columns = [ mem_size ] // last column
-                        let new_state = seq { for row in memory.state do row @ [ if row.[c] = (Bool true) then row.[t] else row.[e] ] } |> Seq.toList
-                        memory <- { memory with state = new_state }
+                        let new_state = seq { for row in ctx.state do row @ [ if row.[c] = (Bool true) then row.[t] else row.[e] ] } |> Seq.toList
+                        let ctx = { ctx with state = new_state }
                         (new_columns, ctx) |> Ok
                     | _ -> 
                         $"Invalid inputs for ket if: {cond} then {then_q} else {else_q}" |> Error
@@ -342,8 +342,9 @@ type Simulator() =
         otherwise it prepares the else_q expression. It returns the new column.
     *)
     and prepare_if_c (condition, then_q, else_q, ctx) =
-        eval_classic (condition, ctx)
-        ==> fun (cond, ctx) ->
+        eval_classic (condition, ctx.evalCtx)
+        ==> fun (cond, evalCtx) ->
+            let ctx = { ctx with evalCtx = evalCtx }
             match cond with
             | (Bool true) ->
                 prepare (then_q, ctx)
@@ -360,18 +361,20 @@ type Simulator() =
         Returns the columns of the specified ket.
      *)
     and prepare_block (stmts, value, ctx) =
-        eval_stmts (stmts, ctx)
-        ==> fun ctx ->
+        eval_stmts (stmts, ctx.evalCtx)
+        ==> fun evalCtx ->
+            let ctx = { ctx with evalCtx = evalCtx }
             prepare (value, ctx)
 
     (*
         Calls the corresponding method, and automatically prepares the resulting Ket
     *)
     and prepare_callmethod (method, args, ctx) =
-        eval_callmethod(method, args, ctx)
-        ==> fun (value, ctx) ->
+        eval_callmethod(method, args, ctx.evalCtx)
+        ==> fun (value, evalCtx) ->
             match value with
             | Value.Ket k -> 
+                let ctx = { ctx with evalCtx = evalCtx }
                 prepare_ket (k, ctx)
             | _ ->
                 $"Expecting a Ket result, got {value}" |> Error
@@ -387,9 +390,6 @@ type Simulator() =
         else
             seq { for i in left do for j in right -> i @ (j |> as_list) }
         |> Seq.toList 
-
-    // exposes the current state of the simulator's memory. Mostly for testing purposes:
-    member this.Memory = memory
 
     (*
         Implements the QPU interface used by the classical eval to interact with quantum
@@ -439,18 +439,18 @@ type Simulator() =
         (*
             Prepares a Quantum Universe from the given universe expression
          *)
-        member this.Prepare (u, ctx: ValueContext) = 
+        member this.Prepare (u, ctx: EvalContext) = 
             assert (ctx.qpu = this)
-            memory <- { allocations = Map.empty; state = [] }
             match u with
             | U.Prepare q ->
                 eval_quantum (q, ctx)
                 ==> fun (ket, ctx) ->
                     match ket with
                     | Value.Ket ket -> 
+                        let ctx = { allocations = Map.empty; state = []; evalCtx = ctx }
                         prepare_ket (ket, ctx)
                         ==> fun (columns, ctx) ->
-                            (Value.Universe (Universe(memory.state, columns)), ctx) |> Ok
+                            (Value.Universe (Universe(ctx.state, columns)), ctx.evalCtx) |> Ok
                     | _ -> "" |> Error
             | U.Var id ->
                 match ctx.heap.TryFind id with

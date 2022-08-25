@@ -49,7 +49,7 @@ module Utils =
             answers |> List.find equalAnswer |> ignore
             true
 
-    let verify_expression (ctx: ValueContext) (e: Expression, answers: Value list) =
+    let verify_expression (ctx: EvalContext) (e: Expression, answers: Value list) =
         let qpu = ctx.qpu
         let checkRepeatMeasurement(u, v) =
             for i in 1 .. 5 do

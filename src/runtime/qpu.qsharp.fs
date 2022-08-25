@@ -23,7 +23,7 @@ type Processor() =
 
     let mutable memory = { allocations = Map.empty }
 
-    let rec prepare_ket (ket : Ket, ctx: ValueContext) =
+    let rec prepare_ket (ket : Ket, ctx: EvalContext) =
         match memory.allocations.TryFind ket.Id with
         | Some columns -> 
             (columns, ctx) |> Ok        // Already prepared...
@@ -59,6 +59,7 @@ type Processor() =
         | Q.CallMethod  _
         | Q.Summarize _ ->
             $"Not implemented: {q}" |> Error
+
 
     interface QPU with
         member this.Measure (universe: IUniverse) =

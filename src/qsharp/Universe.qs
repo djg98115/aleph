@@ -45,6 +45,7 @@ namespace aleph.qsharp {
 
     operation _tracker (qubits: Qubit[], target: Qubit) : Unit
     is Adj + Ctl {
+        log.Debug($".tracker.");
         CNOT(qubits[0], target);
     }
 

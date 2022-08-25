@@ -1,12 +1,12 @@
 
 module Utils
     open aleph.runtime.Eval
-    open aleph.runtime.qpu
+    open aleph.runtime.qpu.classic
 
     let run qpu program =
         let context = { 
             heap = Map.empty
-            types = Map.empty
+            typeCtx = Map.empty
             qpu =  qpu
         }
 
@@ -18,5 +18,5 @@ module Utils
         printfn "ℵ:aleph (v0.3)"
         0
 
-    let simulate program = program |> run (Simulator())
+    let simulate program = program |> run (Processor())
 
