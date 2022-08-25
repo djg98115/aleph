@@ -1,16 +1,14 @@
 namespace aleph.qsharp.ket {
-    open aleph.qsharp;
-    open aleph.qsharp.log as log;
 
     open Microsoft.Quantum.Convert;
     open Microsoft.Quantum.Intrinsic;
-    open Microsoft.Quantum.Canon;
-    open Microsoft.Quantum.Arrays;
 
+    open aleph.qsharp;
+    open aleph.qsharp.log as log;
 
-    function Literal(classic: Value[][], oldUniverse: Universe) : Universe
+    function Literal(classic: Value[][], previous: Universe) : Universe
     {
-        let (oldRows, oldColumns, _, _) = oldUniverse!;
+        let (oldRows, oldColumns, _, oldOracle) = previous!;
         let tupleSize = Length(classic[0]);
 
         mutable start = oldColumns;
@@ -26,7 +24,7 @@ namespace aleph.qsharp.ket {
             | oldRows * Length(classic);
         let columns = start;
 
-        let oracle = _Literal_oracle(classic, output, oldColumns, start-1, _, _);
+        let oracle = _Literal_oracle(classic, output, oldColumns, start-1, oldOracle, _, _);
         let universe = Universe(rows, columns, output, oracle);
 
         log.Info($"Literal Init --> classic: {classic}, output: {output}");
@@ -38,31 +36,41 @@ namespace aleph.qsharp.ket {
         registers: Range[],
         first: Int,
         last: Int,
+        previous: (Qubit[], Qubit) => Unit is Adj + Ctl,
         all: Qubit[], target: Qubit) : Unit
     is Adj + Ctl {
         log.Debug($"all:{all}, target:{target}, first:{first}, last:{last}");
 
-        for i in 0..Length(classic) - 1 {
-            let value = classic[i];
+        use t1 = Qubit();
+        use t2 = Qubit();
 
-            within {
-                for k in 0..Length(value)-1 {
-                    let (v, _) = value[k]!;
-                    let q = all[registers[k]];
-                    let n = Length(q);
-                    let bits = IntAsBoolArray(v, n);
-                    log.Debug($"v:{v}, q:{q}, bits:{bits}, ");
+        within {
+            previous(all, t1);
 
-                    for b in 0 .. n - 1 {
-                        if (bits[b] == false) {
-                            X(q[b]);
+            for i in 0..Length(classic) - 1 {
+                let value = classic[i];
+
+                within {
+                    for k in 0..Length(value)-1 {
+                        let (v, _) = value[k]!;
+                        let q = all[registers[k]];
+                        let n = Length(q);
+                        let bits = IntAsBoolArray(v, n);
+                        log.Debug($"v:{v}, q:{q}, bits:{bits}, ");
+
+                        for b in 0 .. n - 1 {
+                            if (bits[b] == false) {
+                                X(q[b]);
+                            }
                         }
                     }
+                } apply {
+                    let ctrls = all[first..last];
+                    Controlled X (ctrls, t2);
                 }
-            } apply {
-                let ctrls = all[first..last];
-                Controlled X (ctrls, target);
             }
+        } apply {
+            Controlled X ([t1, t2], target);
         }
     }
 }

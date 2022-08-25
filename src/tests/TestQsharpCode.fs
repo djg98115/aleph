@@ -18,8 +18,6 @@ type TestQsharpCode () =
     let BOOL_REGISTER_SIZE = 1
     let INT_REGISTER_SIZE = 2
 
-    let emptyUniverse = new Universe((0,0, new QArray<QRange>(), null))
-
     let toQValue = function
         | Bool b -> new QValue((if b then (1,BOOL_REGISTER_SIZE) else (0,BOOL_REGISTER_SIZE)))
         | Int i -> new QValue((i, INT_REGISTER_SIZE))
@@ -61,11 +59,12 @@ type TestQsharpCode () =
         let sim = new QuantumSimulator()
 
         let test_one (values: Value list, qubits: int) = 
+            let bigbang = BigBang.Run(sim).Result
             let v = Set (new Set<Value>(values)) |> toQSet
-            let u = ket.Literal.Run(sim, v, emptyUniverse).Result
+            let u = ket.Literal.Run(sim, v, bigbang).Result
             printfn "Universe = %A" u
             Assert.AreEqual(int64(values.Length), u.rows)
-            Assert.AreEqual(int64(qubits), u.columns)
+            Assert.AreEqual(int64(qubits + 1), u.columns)
 
             let r = Sample.Run(sim, u).Result |> toValue
             printfn "result = %A" r
