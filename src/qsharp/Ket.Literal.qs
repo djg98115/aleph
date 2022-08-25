@@ -15,7 +15,7 @@ namespace aleph.qsharp.ket {
         mutable output = [];
         for i in 0..tupleSize-1 {
             let (_, size) = classic[0][i]!;
-            set output = output + [start..start+size-1];
+            set output = output + [Register(start..start+size-1)];
             set start = start + size;
         }
 
@@ -33,7 +33,7 @@ namespace aleph.qsharp.ket {
 
     operation _Literal_oracle(
         classic: Value[][],
-        registers: Range[],
+        registers: Register[],
         first: Int,
         last: Int,
         previous: (Qubit[], Qubit) => Unit is Adj + Ctl,
@@ -53,7 +53,7 @@ namespace aleph.qsharp.ket {
                 within {
                     for k in 0..Length(value)-1 {
                         let (v, _) = value[k]!;
-                        let q = all[registers[k]];
+                        let q = all[registers[k]!];
                         let n = Length(q);
                         let bits = IntAsBoolArray(v, n);
                         log.Debug($"v:{v}, q:{q}, bits:{bits}, ");

@@ -9,10 +9,12 @@ namespace aleph.qsharp {
     open aleph.qsharp.grover as grover;
     open aleph.qsharp.log as log;
 
+    newtype Register = Range;
+
     newtype Universe = (
         rows: Int,
         columns: Int,
-        output: Range[],
+        output: Register[],
         oracle: (Qubit[], Qubit) => Unit is Adj + Ctl
     );
 
@@ -24,6 +26,11 @@ namespace aleph.qsharp {
     function BigBang(): Universe {
         return Universe(0, 1, [], _tracker(_, _));
     }
+
+    function UpdateOutput(o: Register[], original: Universe) : Universe {
+        return original
+            w/ output <- o;
+    }
     
     operation Sample(universe: Universe) : Value[] {
         let (_, columns, output, oracle) = universe!;
@@ -34,8 +41,8 @@ namespace aleph.qsharp {
 
         mutable result = [];
         for r in output {
-            let value = ResultArrayAsInt(ForEach(M, qubits[r]));
-            let size = Length(RangeAsIntArray(r));
+            let value = ResultArrayAsInt(ForEach(M, qubits[r!]));
+            let size = Length(RangeAsIntArray(r!));
             set result += [ Value(value, size) ];
         }
 

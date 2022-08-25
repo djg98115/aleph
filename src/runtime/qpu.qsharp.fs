@@ -4,40 +4,37 @@ open aleph.qsharp
 
 open aleph.parser.ast.typed
 open aleph.runtime.Eval
+open Microsoft.Quantum.Simulation.Core
 
 type QUniverse = aleph.qsharp.Universe
 type QValue = aleph.qsharp.Value
 
-type Memory = {
-    allocations: Map<int, QUniverse>
-}
 
 type Universe(state: QUniverse) =
     interface IUniverse with
         member this.CompareTo(obj: obj): int = 
             failwith "Not Implemented"
-    member val State = state with get,set
+    member val State = state
+
+type QsharpContext = {
+    allocations: Map<int, IQArray<QRange>>
+    sim: Simulator
+    universe: QUniverse
+    evalCtx: EvalContext
+}
 
 type Processor() =
     let random = System.Random()
 
-    let mutable memory = { allocations = Map.empty }
-
-    let rec prepare_ket (ket : Ket, ctx: EvalContext) =
-        match memory.allocations.TryFind ket.Id with
-        | Some columns -> 
-            (columns, ctx) |> Ok        // Already prepared...
+    let rec prepare_ket (ket : Ket, ctx: QsharpContext) =
+        
+        match ctx.allocations.TryFind ket.Id with
+        | Some registers -> 
+            UpdateOutput.Run()
+            ctx |> Ok        // Already prepared...
         | None ->
             prepare (ket.StatePrep, ctx)
-            ==> fun (columns, ctx) ->
-                // Assign to the ket the columns returned by the preparation:
-                memory <- { memory with allocations = memory.allocations.Add (ket.Id, columns) }
-                (columns, ctx) |> Ok
 
-    (*
-        Prepares the Universe for the given expression, and returns the index of the
-        columns corresponding to the return value of the expression.
-     *)
     and prepare (q, ctx) =
         match q with
         | Q.Var _
