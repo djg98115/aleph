@@ -15,8 +15,10 @@ open aleph.tests.Utils
     then verify that the quantum state and the returned columns
     from the preparation matches some expected values.
 *)
-type TestSimulator () =
-    member this.Context = { ClassicValueContext.ctx with qpu = aleph.runtime.qpu.classic.Processor() }
+type TestQPUClassic () =
+    member this.Context = { 
+        ClassicValueContext.ctx with qpu = aleph.runtime.qpu.classic.Processor()
+    }
 
     [<TestMethod>]
     member this.TestBasicExpressions () =

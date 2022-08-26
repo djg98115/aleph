@@ -66,7 +66,7 @@ module Utils =
         let mutable v2 = measure(u2, ctx)
         checkRepeatMeasurement(u2, v2)
         Assert.IsTrue(is_valid_answer answers v1)
-        while (answers.Length > 0 && v2 = v1) do
+        while (answers.Length > 1 && v2 = v1) do
             u2 <- prepare(e, ctx)
             v2 <- measure(u2, ctx)
             checkRepeatMeasurement(u2, v2)

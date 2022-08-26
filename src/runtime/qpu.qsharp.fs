@@ -14,6 +14,7 @@ type Universe(state: QUniverse) =
         member this.CompareTo(obj: obj): int = 
             failwith "Not Implemented"
     member val State = state
+    member val Value:Option<Value> = None with get,set
 
 type QsharpContext = {
     allocations: Map<int, IQArray<Register>>
@@ -72,8 +73,9 @@ type Processor(sim: IOperationFactory) =
 
     and prepare (q, ctx) =
         match q with
+        | Q.Literal values -> prepare_literal (values, ctx)
+
         | Q.Var _
-        | Q.Literal _
         | Q.KetAll _
         | Q.Equals _
         | Q.Add _
@@ -107,8 +109,13 @@ type Processor(sim: IOperationFactory) =
     interface QPU with
         member this.Measure (universe: IUniverse) =
             let u = universe :?> Universe
-            let sample = Sample.Run(sim, u.State).Result |> Convert.toValue
-            sample |> Ok
+            match u.Value with
+            | Some v ->
+                v |> Ok
+            | None ->
+                let sample = Sample.Run(sim, u.State).Result |> Convert.toValue
+                u.Value <- Some sample
+                sample |> Ok
         
         member this.Prepare (u, evalCtx) =
             assert (evalCtx.qpu = this)
