@@ -5,19 +5,15 @@ open Microsoft.Quantum.Simulation.Core
 open aleph.qsharp
 type QUniverse = Universe
 type QValue = Value
+type QRegister = Register
+type QRegisters = IQArray<QRegister>
 
 open aleph.parser.ast.typed
 open aleph.runtime.Eval
 
-type Universe(state: QUniverse) =
-    interface IUniverse with
-        member this.CompareTo(obj: obj): int = 
-            failwith "Not Implemented"
-    member val State = state
-    member val Value:Option<Value> = None with get,set
 
 type QsharpContext = {
-    allocations: Map<int, IQArray<Register>>
+    allocations: Map<int, QRegisters>
     universe: QUniverse
     evalCtx: EvalContext
 }
@@ -62,18 +58,36 @@ module Convert =
         else
             Tuple (result |> Seq.map one |> Seq.toList)
 
+type Universe(sim: IOperationFactory, state: QUniverse, registers: QRegisters) =
+    let mutable value = None
+
+    interface IUniverse with
+        member this.CompareTo(obj: obj): int = 
+            failwith "Not Implemented"
+
+    member this.Sample() =
+        match value with
+        | Some v ->
+            v
+        | None ->
+            let sample = Sample.Run(sim, state, registers).Result |> Convert.toValue
+            value <- Some sample
+            sample
+
 type Processor(sim: IOperationFactory) =
     let rec prepare_ket (ket : Ket, ctx: QsharpContext) =
         match ctx.allocations.TryFind ket.Id with
         | Some registers -> 
-            let ctx = { ctx with universe = UpdateUniverseOutput.Run(sim, ctx.universe, registers).Result }
-            ctx |> Ok
+            (registers, ctx) |> Ok
         | None ->
             prepare (ket.StatePrep, ctx)
 
     and prepare (q, ctx) =
         match q with
         | Q.Literal values -> prepare_literal (values, ctx)
+
+        // | Q.Join (left, right) -> prepare_join(left, right, ctx)
+        | Q.Join _
 
         | Q.Var _
         | Q.KetAll _
@@ -85,7 +99,6 @@ type Processor(sim: IOperationFactory) =
         | Q.Or _
         | Q.Project _
         | Q.Index _
-        | Q.Join  _
         | Q.Solve  _
         | Q.Block  _
         | Q.IfQuantum  _
@@ -99,27 +112,28 @@ type Processor(sim: IOperationFactory) =
         ==> fun (values, evalCtx) ->
             match values with
             | Value.Set _ ->
-                let v = values |> Convert.toQSet
-                let u = ket.Literal.Run(sim, v, ctx.universe).Result
-                { ctx with universe = u; evalCtx = evalCtx} |> Ok
+                let struct (u, r) = ket.Literal.Run(sim, values |> Convert.toQSet, ctx.universe).Result
+                (r, { ctx with universe = u; evalCtx = evalCtx }) |> Ok
             | _ -> 
                 $"Invalid classic value for a ket literal: {values}" |> Error
 
+    // and prepare_join (left, right, ctx) =
+    //     prepare (left, ctx)
+    //     ==> fun (left, ctx) ->
+    //         prepare (right, ctx)
+    //         ==> fun (right, ctx) ->
+    //             (left @ right, ctx) |> Ok
+
+
 
     interface QPU with
+    
         member this.Measure (universe: IUniverse) =
             let u = universe :?> Universe
-            match u.Value with
-            | Some v ->
-                v |> Ok
-            | None ->
-                let sample = Sample.Run(sim, u.State).Result |> Convert.toValue
-                u.Value <- Some sample
-                sample |> Ok
+            u.Sample() |> Ok
         
         member this.Prepare (u, evalCtx) =
             assert (evalCtx.qpu = this)
-
             match u with
             | U.Prepare q ->
                 eval_quantum (q, evalCtx)
@@ -131,8 +145,8 @@ type Processor(sim: IOperationFactory) =
                             evalCtx = evalCtx
                             universe = BigBang.Run(sim).Result }
                         prepare_ket (ket, ctx)
-                        ==> fun ctx ->
-                            (Value.Universe (Universe(ctx.universe)), ctx.evalCtx) |> Ok
+                        ==> fun (registers, ctx) ->
+                            (Value.Universe (Universe(sim, ctx.universe, registers)), ctx.evalCtx) |> Ok
                     | _ -> "" |> Error
             | U.Var id ->
                 match evalCtx.heap.TryFind id with

@@ -27,12 +27,12 @@ type TestQsharpCode () =
         let test_one (values: Value list, qubits: int) = 
             let bigbang = BigBang.Run(sim).Result
             let v = Set (new Set<Value>(values)) |> toQSet
-            let u = ket.Literal.Run(sim, v, bigbang).Result
+            let struct (u, o) = ket.Literal.Run(sim, v, bigbang).Result
             printfn "Universe = %A" u
             Assert.AreEqual(int64(values.Length), u.rows)
             Assert.AreEqual(int64(qubits + 1), u.columns)
 
-            let r = Sample.Run(sim, u).Result |> toValue
+            let r = Sample.Run(sim, u, o).Result |> toValue
             printfn "result = %A" r
             Assert.IsTrue(is_valid_answer values r)
 

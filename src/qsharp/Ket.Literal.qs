@@ -6,9 +6,9 @@ namespace aleph.qsharp.ket {
     open aleph.qsharp;
     open aleph.qsharp.log as log;
 
-    function Literal(classic: Value[][], previous: Universe) : Universe
+    function Literal(classic: Value[][], previous: Universe) : (Universe, Register[])
     {
-        let (oldRows, oldColumns, _, oldOracle) = previous!;
+        let (oldRows, oldColumns, oldOracle) = previous!;
         let tupleSize = Length(classic[0]);
 
         mutable start = oldColumns;
@@ -25,10 +25,10 @@ namespace aleph.qsharp.ket {
         let columns = start;
 
         let oracle = _Literal_oracle(classic, output, oldColumns, start-1, oldOracle, _, _);
-        let universe = Universe(rows, columns, output, oracle);
+        let universe = Universe(rows, columns, oracle);
 
         log.Info($"Literal Init --> classic: {classic}, output: {output}");
-        return universe;
+        return (universe, output);
     }
 
     operation _Literal_oracle(

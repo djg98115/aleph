@@ -10,7 +10,6 @@ namespace aleph.qsharp {
     newtype Universe = (
         rows: Int,
         columns: Int,
-        output: Register[],
         oracle: (Qubit[], Qubit) => Unit is Adj + Ctl
     );
 

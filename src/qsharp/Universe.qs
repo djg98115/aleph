@@ -10,23 +10,18 @@ namespace aleph.qsharp {
     open aleph.qsharp.log as log;
 
     function BigBang(): Universe {
-        return Universe(0, 1, [], _tracker(_, _));
-    }
-
-    function UpdateUniverseOutput(original: Universe, o: Register[]) : Universe {
-        return original
-            w/ output <- o;
+        return Universe(0, 1, _tracker(_, _));
     }
     
-    operation Sample(universe: Universe) : Value[] {
-        let (_, columns, output, oracle) = universe!;
+    operation Sample(universe: Universe, register: Register[]) : Value[] {
+        let (_, columns, oracle) = universe!;
 
         use qubits = Qubit[columns]; // One extra for tracker
 
         Prepare(universe, qubits);
 
         mutable result = [];
-        for r in output {
+        for r in register {
             let value = ResultArrayAsInt(ForEach(M, qubits[r!]));
             let size = Length(RangeAsIntArray(r!));
             set result += [ Value(value, size) ];
@@ -43,7 +38,7 @@ namespace aleph.qsharp {
     }
 
     operation Prepare(universe: Universe, qubits: Qubit[]) : Unit {
-        let (rows, columns, _, oracle) = universe!;
+        let (rows, columns, oracle) = universe!;
         let tracker = qubits[0];
 
         repeat {
