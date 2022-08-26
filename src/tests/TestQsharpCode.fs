@@ -8,51 +8,13 @@ open Microsoft.Quantum.Simulation.Core
 open aleph.qsharp
 open aleph.runtime.Eval
 open aleph.runtime.qpu.qsharp
+open aleph.runtime.qpu.qsharp.Convert
 
 open aleph.tests.Utils
 
 
 [<TestClass>]
 type TestQsharpCode () =
-
-    let BOOL_REGISTER_SIZE = 1
-    let INT_REGISTER_SIZE = 2
-
-    let toQValue = function
-        | Bool b -> new QValue((if b then (1,BOOL_REGISTER_SIZE) else (0,BOOL_REGISTER_SIZE)))
-        | Int i -> new QValue((i, INT_REGISTER_SIZE))
-        | _ -> failwith "not an int/bool"
-        
-    let toQTuple = function
-        | Bool b -> [| (Bool b |> toQValue) |] |> QArray<QValue>
-        | Int i -> [| (Int i |> toQValue) |] |> QArray<QValue>
-        | Tuple t -> 
-            t 
-            |> List.map toQValue 
-            |> List.toArray
-            |> QArray<QValue>
-        | _ -> failwith "not a tuple"
-
-    let toQSet = function
-        | Set s -> 
-            s 
-            |> Set.toArray
-            |> Array.map toQTuple
-            |> QArray<IQArray<QValue>>
-        | _ -> failwith "not a set"
-        
-    let toValue (result: IQArray<QValue>) = 
-        let one (v: QValue) =
-            if v.size = BOOL_REGISTER_SIZE then
-                if v.value = 1 then Bool true else Bool false
-            elif v.size = INT_REGISTER_SIZE then
-                Int (int v.value)
-            else
-                failwith "not an int/bool"
-        if result.Length = 1 then
-            one result.[0]
-        else
-            Tuple (result |> Seq.map one |> Seq.toList)
 
     [<TestMethod>]
     member this.TestLiteral () =

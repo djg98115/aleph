@@ -9,25 +9,11 @@ namespace aleph.qsharp {
     open aleph.qsharp.grover as grover;
     open aleph.qsharp.log as log;
 
-    newtype Register = Range;
-
-    newtype Universe = (
-        rows: Int,
-        columns: Int,
-        output: Register[],
-        oracle: (Qubit[], Qubit) => Unit is Adj + Ctl
-    );
-
-    newtype Value = (
-        value: Int,
-        size: Int
-    );
-
     function BigBang(): Universe {
         return Universe(0, 1, [], _tracker(_, _));
     }
 
-    function UpdateOutput(o: Register[], original: Universe) : Universe {
+    function UpdateUniverseOutput(original: Universe, o: Register[]) : Universe {
         return original
             w/ output <- o;
     }
