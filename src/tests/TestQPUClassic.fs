@@ -96,7 +96,7 @@ type TestQPUClassic () =
     member this.TestAddMultiply () =
         let ctx = 
             this.Context 
-            |> this.AddToContext "k1" (AnyType.QType (QType.Ket [Type.Int; Type.Int])) (u.Ket [
+            |> add_to_context "k1" (AnyType.QType (QType.Ket [Type.Int; Type.Int])) (u.Ket [
                 u.Tuple [ u.Int 0; u.Int 0]
                 u.Tuple [ u.Int 0; u.Int 1]
                 u.Tuple [ u.Int 1; u.Int 1]
@@ -176,12 +176,12 @@ type TestQPUClassic () =
     member this.TestJoin () =
         let ctx = 
             this.Context
-            |> this.AddToContext "k1" (AnyType.QType (QType.Ket [Type.Int; Type.Int])) (u.Ket [
+            |> add_to_context "k1" (AnyType.QType (QType.Ket [Type.Int; Type.Int])) (u.Ket [
                 u.Tuple [ u.Int 0; u.Int 0]
                 u.Tuple [ u.Int 0; u.Int 1]
                 u.Tuple [ u.Int 1; u.Int 1]
             ])
-            |> this.AddToContext "k2" (AnyType.QType (QType.Ket [Type.Int])) (u.Ket [
+            |> add_to_context "k2" (AnyType.QType (QType.Ket [Type.Int])) (u.Ket [
                 u.Tuple [ u.Int 1 ]
                 u.Tuple [ u.Int 3 ]
             ])
@@ -242,7 +242,7 @@ type TestQPUClassic () =
     member this.TestIndex () =
         let ctx = 
             this.Context 
-            |> this.AddToContext "k1" (AnyType.QType (QType.Ket [Type.Int; Type.Int])) (u.Ket [
+            |> add_to_context "k1" (AnyType.QType (QType.Ket [Type.Int; Type.Int])) (u.Ket [
                 u.Tuple [ u.Int 0; u.Int 0]
                 u.Tuple [ u.Int 0; u.Int 1]
                 u.Tuple [ u.Int 1; u.Int 1]
@@ -272,12 +272,12 @@ type TestQPUClassic () =
     member this.TestIfQ () =
         let ctx = 
             this.Context
-            |> this.AddToContext "k1" (AnyType.QType (QType.Ket [Type.Int; Type.Int])) (u.Ket [
+            |> add_to_context "k1" (AnyType.QType (QType.Ket [Type.Int; Type.Int])) (u.Ket [
                 u.Tuple [ u.Int 0; u.Int 0]
                 u.Tuple [ u.Int 0; u.Int 1]
                 u.Tuple [ u.Int 1; u.Int 1]
             ])
-            |> this.AddToContext "k2" (AnyType.QType (QType.Ket [Type.Int])) (u.Ket [
+            |> add_to_context "k2" (AnyType.QType (QType.Ket [Type.Int])) (u.Ket [
                 u.Tuple [ u.Int 2 ]
                 u.Tuple [ u.Int 3 ]
             ])
@@ -300,12 +300,12 @@ type TestQPUClassic () =
     member this.TestIfClassic () =
         let ctx = 
             this.Context
-            |> this.AddToContext "k1" (AnyType.QType (QType.Ket [Type.Int; Type.Int])) (u.Ket [
+            |> add_to_context "k1" (AnyType.QType (QType.Ket [Type.Int; Type.Int])) (u.Ket [
                 u.Tuple [ u.Int 0; u.Int 0]
                 u.Tuple [ u.Int 0; u.Int 1]
                 u.Tuple [ u.Int 1; u.Int 1]
             ])
-            |> this.AddToContext "k2" (AnyType.QType (QType.Ket [Type.Int])) (u.Ket [
+            |> add_to_context "k2" (AnyType.QType (QType.Ket [Type.Int])) (u.Ket [
                 u.Tuple [ u.Int 2 ]
                 u.Tuple [ u.Int 3 ]
             ])
@@ -337,12 +337,12 @@ type TestQPUClassic () =
     member this.TestSolveEquals () =
         let ctx = 
             this.Context
-            |> this.AddToContext "k1" (AnyType.QType (QType.Ket [Type.Int; Type.Int])) (u.Ket [
+            |> add_to_context "k1" (AnyType.QType (QType.Ket [Type.Int; Type.Int])) (u.Ket [
                 u.Tuple [ u.Int 0; u.Int 0]
                 u.Tuple [ u.Int 0; u.Int 1]
                 u.Tuple [ u.Int 1; u.Int 1]
             ])
-            |> this.AddToContext "k2" (AnyType.QType (QType.Ket [Type.Int])) (u.Ket [
+            |> add_to_context "k2" (AnyType.QType (QType.Ket [Type.Int])) (u.Ket [
                 u.Tuple [ u.Int 2 ]
                 u.Tuple [ u.Int 3 ]
             ])
@@ -387,7 +387,7 @@ type TestQPUClassic () =
     member this.TestBoolOps () =
         let ctx = 
             this.Context 
-            |> this.AddToContext "k" (AnyType.QType (QType.Ket [Type.Int; Type.Bool])) (u.Ket [
+            |> add_to_context "k" (AnyType.QType (QType.Ket [Type.Int; Type.Bool])) (u.Ket [
                 u.Tuple [ u.Int 0; u.Bool true]
                 u.Tuple [ u.Int 0; u.Bool false]
                 u.Tuple [ u.Int 1; u.Bool true]
@@ -514,7 +514,7 @@ type TestQPUClassic () =
     member this.TestMeasure () =
         let ctx = 
             this.Context 
-            |> this.AddToContext "k" (AnyType.QType (QType.Ket [Type.Int; Type.Bool])) (u.Ket [
+            |> add_to_context "k" (AnyType.QType (QType.Ket [Type.Int; Type.Bool])) (u.Ket [
                 u.Tuple [ u.Int 0; u.Bool true]
                 u.Tuple [ u.Int 0; u.Bool false]
                 u.Tuple [ u.Int 1; u.Bool true]
@@ -601,11 +601,3 @@ type TestQPUClassic () =
             Assert.AreEqual($"Expected error: {error}", $"Got Value: {v}")
         | Error msg -> 
             Assert.AreEqual(error, msg)
-
-
-    member this.AddToContext id t e ctx =
-        match run (e, ctx) with
-        | Ok (v, ctx) ->
-            { ctx with heap = ctx.heap.Add (id, v); typeCtx = ctx.typeCtx.Add(id, t)  }
-        | Error msg ->
-            failwith msg

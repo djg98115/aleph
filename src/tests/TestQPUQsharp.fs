@@ -14,7 +14,7 @@ open aleph.tests.Utils
 
 
 [<TestClass>]
-type TestQsharpCode () =
+type TestQPUQsharp () =
     member this.Context = { 
         ClassicValueContext.ctx
         with qpu = aleph.runtime.qpu.qsharp.Processor(new QuantumSimulator())
@@ -95,6 +95,7 @@ type TestQsharpCode () =
                 Tuple [ Bool false; Bool false ]
                 Tuple [ Bool false; Bool true ]
             ]
+            // | (0, false, 0), (0, true, 1), (0, true, 2), (0, true, 3) >
             u.Ket [
                 u.Tuple [ u.Int 0; u.Bool false; u.Int 0 ]
                 u.Tuple [ u.Int 0; u.Bool true; u.Int 1 ]
@@ -106,6 +107,7 @@ type TestQsharpCode () =
                 Tuple [ Int 0; Bool true; Int 2 ]
                 Tuple [ Int 2; Bool true; Int 3 ]
             ]
+            // |@,4>
             u.KetAll (u.Int 4),
             seq { 0..15 } |> Seq.toList |> List.map Int
         ]
@@ -142,7 +144,7 @@ type TestQsharpCode () =
                 Tuple [ Bool false; Bool false; Int 3 ]
                 Tuple [ Bool false; Bool true; Int 3 ]
             ]
-            // ( |@>, |1,3> )
+            // ( |@,3>, |1,3> )
             u.Join(u.KetAll (u.Int 3), u.Ket [u.Int 1; u.Int 3]),
             [
                 Tuple [ Int 0; Int 1 ]

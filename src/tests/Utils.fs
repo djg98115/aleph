@@ -11,6 +11,13 @@ type u = Expression
 
 module Utils =
 
+    let add_to_context id t e ctx =
+        match run (e, ctx) with
+        | Ok (v, ctx) ->
+            { ctx with heap = ctx.heap.Add (id, v); typeCtx = ctx.typeCtx.Add(id, t)  }
+        | Error msg ->
+            failwith msg
+
     let prepare (e, ctx) = 
         match run(u.Prepare e, ctx) with
         | Ok (Universe universe, _) ->
