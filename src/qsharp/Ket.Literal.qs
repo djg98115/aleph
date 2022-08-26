@@ -27,7 +27,7 @@ namespace aleph.qsharp.ket {
         let oracle = _Literal_oracle(classic, output, oldColumns, start-1, oldOracle, _, _);
         let universe = Universe(rows, columns, oracle);
 
-        log.Info($"Literal Init --> classic: {classic}, output: {output}");
+        log.Info($"Ket.Literal::Init --> classic: {classic}, output: {output}");
         return (universe, output);
     }
 
@@ -39,7 +39,7 @@ namespace aleph.qsharp.ket {
         previous: (Qubit[], Qubit) => Unit is Adj + Ctl,
         all: Qubit[], target: Qubit) : Unit
     is Adj + Ctl {
-        log.Debug($"all:{all}, target:{target}, first:{first}, last:{last}");
+        log.Debug($"Ket.Literal::oracle: all:{all}, target:{target}, first:{first}, last:{last}");
 
         use t1 = Qubit();
         use t2 = Qubit();

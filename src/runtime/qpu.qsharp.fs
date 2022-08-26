@@ -20,11 +20,11 @@ type QsharpContext = {
 
 module Convert =
     let BOOL_REGISTER_SIZE = 1
-    let INT_REGISTER_SIZE = 2
+    let INT_REGISTER_DEFAULT_SIZE = 2
 
     let toQValue = function
         | Bool b -> new QValue((if b then (1,BOOL_REGISTER_SIZE) else (0,BOOL_REGISTER_SIZE)))
-        | Int i -> new QValue((i, INT_REGISTER_SIZE))
+        | Int i -> new QValue((i, INT_REGISTER_DEFAULT_SIZE))
         | _ -> failwith "not an int/bool"
         
     let toQTuple = function
@@ -49,10 +49,8 @@ module Convert =
         let one (v: QValue) =
             if v.size = BOOL_REGISTER_SIZE then
                 if v.value = 1 then Bool true else Bool false
-            elif v.size = INT_REGISTER_SIZE then
-                Int (int v.value)
             else
-                failwith "not an int/bool"
+                Int (int v.value)
         if result.Length = 1 then
             one result.[0]
         else
@@ -85,11 +83,11 @@ type Processor(sim: IOperationFactory) =
     and prepare (q, ctx) =
         match q with
         | Q.Literal values -> prepare_literal (values, ctx)
+        | Q.KetAll size -> prepare_ketall (size, ctx)
 
         | Q.Join (left, right) -> prepare_join(left, right, ctx)
         
         | Q.Var _
-        | Q.KetAll _
         | Q.Equals _
         | Q.Add _
         | Q.Multiply _
@@ -113,10 +111,20 @@ type Processor(sim: IOperationFactory) =
             | Value.Set w when w.IsEmpty->
                 (new QArray<Register>() :> QRegisters, { ctx with evalCtx = evalCtx }) |> Ok
             | Value.Set _ ->
-                let struct (u, r) = ket.Literal.Run(sim, values |> Convert.toQSet, ctx.universe).Result
-                (r, { ctx with universe = u; evalCtx = evalCtx }) |> Ok
+                ket.Literal.Run(sim, values |> Convert.toQSet, ctx.universe).Result
+                |> qsharp_result { ctx with evalCtx = evalCtx }
             | _ -> 
                 $"Invalid classic value for a ket literal: {values}" |> Error
+
+    and prepare_ketall (size, ctx) =
+        eval_classic (size, ctx.evalCtx)
+        ==> fun (size, evalCtx) ->
+            match size with
+            | Value.Int i ->
+                ket.All.Run(sim, i |> int64, ctx.universe).Result
+                |> qsharp_result { ctx with evalCtx = evalCtx }
+            | _ -> 
+                $"Invalid ket_all size, expected int got: {size}" |> Error
 
     and prepare_join (left, right, ctx) =
         prepare (left, ctx)
@@ -124,6 +132,10 @@ type Processor(sim: IOperationFactory) =
             prepare (right, ctx)
             ==> fun (right, ctx) ->
                 (QArray.Add(left, right) :> QRegisters, ctx) |> Ok
+
+    and qsharp_result ctx value =
+        let struct (u, r) = value
+        (r, { ctx with universe = u }) |> Ok
 
 
 

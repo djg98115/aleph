@@ -48,18 +48,18 @@ type TestQsharpCode () =
                 Int 0
                 Int 1
                 Int 2
-            ], INT_REGISTER_SIZE
+            ], INT_REGISTER_DEFAULT_SIZE
             [
                 Tuple [ Int 0; Int 0 ]
                 Tuple [ Int 0; Int 1 ]
                 Tuple [ Int 0; Int 2 ]
-            ], INT_REGISTER_SIZE + INT_REGISTER_SIZE 
+            ], INT_REGISTER_DEFAULT_SIZE + INT_REGISTER_DEFAULT_SIZE 
             [
                 Tuple [ Int 0; Bool false; Int 0 ]
                 Tuple [ Int 0; Bool true; Int 1 ]
                 Tuple [ Int 0; Bool true; Int 2 ]
                 Tuple [ Int 2; Bool true; Int 3 ]
-            ], INT_REGISTER_SIZE + BOOL_REGISTER_SIZE + INT_REGISTER_SIZE
+            ], INT_REGISTER_DEFAULT_SIZE + BOOL_REGISTER_SIZE + INT_REGISTER_DEFAULT_SIZE
         ]
         |> List.iter test_one
 
@@ -106,6 +106,8 @@ type TestQsharpCode () =
                 Tuple [ Int 0; Bool true; Int 2 ]
                 Tuple [ Int 2; Bool true; Int 3 ]
             ]
+            u.KetAll (u.Int 4),
+            seq { 0..15 } |> Seq.toList |> List.map Int
         ]
         |> List.iter (verify_expression ctx)
 
@@ -134,12 +136,31 @@ type TestQsharpCode () =
                     u.Tuple [ u.Bool false; u.Bool false ]
                     u.Tuple [ u.Bool false; u.Bool true ]],
                 u.Ket [ u.Int 1; u.Int 3]),
-
             [
                 Tuple [ Bool false; Bool false; Int 1 ]
                 Tuple [ Bool false; Bool true; Int 1 ]
                 Tuple [ Bool false; Bool false; Int 3 ]
                 Tuple [ Bool false; Bool true; Int 3 ]
+            ]
+            // ( |@>, |1,3> )
+            u.Join(u.KetAll (u.Int 3), u.Ket [u.Int 1; u.Int 3]),
+            [
+                Tuple [ Int 0; Int 1 ]
+                Tuple [ Int 0; Int 3 ]
+                Tuple [ Int 1; Int 1 ]
+                Tuple [ Int 1; Int 3 ]
+                Tuple [ Int 2; Int 1 ]
+                Tuple [ Int 2; Int 3 ]
+                Tuple [ Int 3; Int 1 ]
+                Tuple [ Int 3; Int 3 ]
+                Tuple [ Int 4; Int 1 ]
+                Tuple [ Int 4; Int 3 ]
+                Tuple [ Int 5; Int 1 ]
+                Tuple [ Int 5; Int 3 ]
+                Tuple [ Int 6; Int 1 ]
+                Tuple [ Int 6; Int 3 ]
+                Tuple [ Int 7; Int 1 ]
+                Tuple [ Int 7; Int 3 ]
             ]
         ]
         |> List.iter (verify_expression ctx)
