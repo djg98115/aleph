@@ -73,12 +73,17 @@ type Universe(sim: IOperationFactory, state: QUniverse, registers: QRegisters) =
             sample
 
 type Processor(sim: IOperationFactory) =
+
     let rec prepare_ket (ket : Ket, ctx: QsharpContext) =
         match ctx.allocations.TryFind ket.Id with
         | Some registers -> 
             (registers, ctx) |> Ok
         | None ->
             prepare (ket.StatePrep, ctx)
+            ==> fun (registers, ctx) ->
+                let ctx = { ctx with allocations = ctx.allocations.Add (ket.Id, registers) }
+                (registers, ctx) |> Ok
+            
 
     and prepare (q, ctx) =
         match q with
@@ -86,6 +91,7 @@ type Processor(sim: IOperationFactory) =
         | Q.Literal values -> prepare_literal (values, ctx)
         | Q.KetAll size -> prepare_ketall (size, ctx)
 
+        | Q.Project (q, index) -> prepare_project (q, index, ctx)
         | Q.Join (left, right) -> prepare_join(left, right, ctx)
         
         | Q.Equals _
@@ -94,7 +100,6 @@ type Processor(sim: IOperationFactory) =
         | Q.Not _
         | Q.And _
         | Q.Or _
-        | Q.Project _
         | Q.Index _
         | Q.Solve  _
         | Q.Block  _
@@ -135,6 +140,12 @@ type Processor(sim: IOperationFactory) =
             | _ -> 
                 $"Invalid ket_all size, expected int got: {size}" |> Error
 
+    and prepare_project (q, index, ctx) =
+        prepare (q, ctx)
+        ==> fun (registers, ctx) ->
+            let i = index |> int64
+            (registers.Slice(new QRange(i, i)), ctx) |> Ok
+
     and prepare_join (left, right, ctx) =
         prepare (left, ctx)
         ==> fun (left, ctx) ->
@@ -142,10 +153,11 @@ type Processor(sim: IOperationFactory) =
             ==> fun (right, ctx) ->
                 (QArray.Add(left, right) :> QRegisters, ctx) |> Ok
 
+
+
     and qsharp_result ctx value =
         let struct (u, r) = value
         (r, { ctx with universe = u }) |> Ok
-
 
 
     interface QPU with
@@ -164,8 +176,8 @@ type Processor(sim: IOperationFactory) =
                     | Value.Ket ket ->
                         let ctx = {
                             allocations = Map.empty
-                            evalCtx = evalCtx
-                            universe = BigBang.Run(sim).Result }
+                            universe = BigBang.Run(sim).Result
+                            evalCtx = evalCtx }
                         prepare_ket (ket, ctx)
                         ==> fun (registers, ctx) ->
                             (Value.Universe (Universe(sim, ctx.universe, registers)), ctx.evalCtx) |> Ok

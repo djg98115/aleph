@@ -43,14 +43,57 @@ type QuantumContext = {
 }
 
 type Universe(state: Value list list, columns: int list) =
+    let random = System.Random()
+    let mutable value = None
+
     interface IUniverse with
         member this.CompareTo(obj: obj): int = 
             failwith "Not Implemented"
-    member val State = state with get,set
-    member this.Columns = columns
+
+    member val State = state
+    member val Columns = columns
+    
+    (*
+        Sample works by randomly picking a row from the universe with the same probability
+        from the universe, and then projecting (selecting) only the columns
+        associated with the ket.
+        Once measured, the universe is collapsed to this value, and next time it is measured
+        it will return the same value.
+    *)
+    member this.Sample() =
+        match value with
+        | Some v ->
+            v
+        | None ->
+            let pick_world() =
+                match state.Length with
+                // Universe collapsed:
+                | 1 -> 
+                    state.[0]
+                // Empty universe, collapse to random value
+                | 0 -> 
+                    let row = 
+                        if columns.IsEmpty then 
+                            []
+                        else 
+                            seq { for i in 0 .. (columns |> List.max) -> (Value.Int (random.Next())) }  |> Seq.toList
+                    row
+                // Select a random row, and collapse to this value:
+                | n -> 
+                    let i = int (random.NextDouble() * (double (n)))
+                    state.Item i
+            let project_columns (row: Value list) =
+                if columns.Length = 1 then
+                    row.[columns.[0]]
+                else
+                    columns 
+                    |> List.fold (fun result i -> result @ [ row.[i] ]) []
+                    |> Tuple
+            let sample = pick_world() |> project_columns
+            value <- Some sample
+            sample
 
 type Processor() =
-    let random = System.Random()
 
     (* 
         Preparing a Ket consists of first checking if the Ket is already allocated
@@ -88,7 +131,7 @@ type Processor() =
         | And (left,right) -> prepare_and (left, right, ctx)
         | Or (left,right) -> prepare_or (left, right, ctx)
 
-        | Project (q, indices) -> prepare_project (q, indices, ctx)
+        | Project (q, index) -> prepare_project (q, index, ctx)
         | Index (q, index) ->  prepare_index (q, index, ctx)
         | Join (left, right) -> prepare_join (left, right, ctx)
         | Solve (ket, condition) -> prepare_solve (ket, condition, ctx)
@@ -397,70 +440,40 @@ type Processor() =
      *)
     interface QPU with
         (*
-            Measure works by randomly picking a row from the universe with the same probability
-            from the universe, and then projecting (selecting) only the columns
-            associated with the ket.
-            Once measured, the universe is collapsed to this value, and next time it is measured
-            it will return the same value.
-         *)
+            Measure works by sampling the universe:
+        *)
         member this.Measure (universe: IUniverse) =
             let u = universe :?> Universe
-            let pick_world() =
-                match u.State.Length with
-                // Universe collapsed:
-                | 1 -> 
-                    u.State.[0]
-                // Empty universe, collapse to random value
-                | 0 -> 
-                    let row = 
-                        if u.Columns.IsEmpty then 
-                            []
-                        else 
-                            seq { for i in 0 .. (u.Columns |> List.max) -> (Value.Int (random.Next())) }  |> Seq.toList
-                    u.State <- [ row ]
-                    row
-                // Select a random row, and collapse to this value:
-                | n -> 
-                    let i = int (random.NextDouble() * (double (n)))
-                    let row = u.State.Item i
-                    u.State <- [ row ]
-                    row
-            let project_columns (row: Value list) =
-                if u.Columns.Length = 1 then
-                    row.[u.Columns.[0]]
-                else
-                    u.Columns 
-                    |> List.fold (fun result i -> result @ [ row.[i] ]) []
-                    |> Tuple
-            pick_world()
-            |> project_columns
-            |> Ok
+            u.Sample() |> Ok
 
         (*
             Prepares a Quantum Universe from the given universe expression
          *)
-        member this.Prepare (u, ctx: EvalContext) = 
-            assert (ctx.qpu = this)
+        member this.Prepare (u, evalCtx: EvalContext) = 
+            assert (evalCtx.qpu = this)
             match u with
             | U.Prepare q ->
-                eval_quantum (q, ctx)
-                ==> fun (ket, ctx) ->
+                eval_quantum (q, evalCtx)
+                ==> fun (ket, evalCtx) ->
                     match ket with
                     | Value.Ket ket -> 
-                        let ctx = { allocations = Map.empty; state = []; evalCtx = ctx }
+                        let ctx = { 
+                            allocations = Map.empty; 
+                            state = []; 
+                            evalCtx = evalCtx }
                         prepare_ket (ket, ctx)
                         ==> fun (columns, ctx) ->
                             (Value.Universe (Universe(ctx.state, columns)), ctx.evalCtx) |> Ok
                     | _ -> "" |> Error
             | U.Var id ->
-                match ctx.heap.TryFind id with
+                match evalCtx.heap.TryFind id with
                 | Some (Value.Universe u) ->
-                    (Value.Universe u, ctx) |> Ok
+                    (Value.Universe u, evalCtx) |> Ok
                 | _ ->
                     $"Invalid variable: {id}. Expecting universe." |> Error
             | U.Block (stmts, body) ->
-                eval_stmts (stmts, ctx)
-                ==> fun ctx ->
-                    (this :> QPU).Prepare (body, ctx)
+                eval_stmts (stmts, evalCtx)
+                ==> fun evalCtx ->
+                    (this :> QPU).Prepare (body, evalCtx)
             | U.CallMethod (method, args) ->
-                eval_callmethod(method, args, ctx)
+                eval_callmethod(method, args, evalCtx)

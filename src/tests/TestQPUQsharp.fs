@@ -125,6 +125,18 @@ type TestQPUQsharp () =
                 Tuple [ Int 0; Bool false]
                 Tuple [ Int 1; Bool true]
             ]
+            // k.0
+            u.Project (u.Var "k", u.Int 0),
+            [
+                Int 0
+                Int 1
+            ]
+            // k.1
+            u.Project (u.Var "k", u.Int 1),
+            [
+                Bool true
+                Bool false
+            ]
         ]
         |> List.iter (verify_expression ctx)
 
@@ -184,6 +196,12 @@ type TestQPUQsharp () =
                 Tuple [ Int 6; Int 3 ]
                 Tuple [ Int 7; Int 1 ]
                 Tuple [ Int 7; Int 3 ]
+            ]
+            u.Join(u.Var "k", u.Var "k"),
+            [
+                Tuple [ Int 0; Bool true; Int 0; Bool true ]
+                Tuple [ Int 0; Bool false; Int 0; Bool false ]
+                Tuple [ Int 1; Bool true; Int 1; Bool true ]
             ]
         ]
         |> List.iter (verify_expression ctx)
