@@ -5,6 +5,8 @@ open Microsoft.VisualStudio.TestTools.UnitTesting
 open Microsoft.Quantum.Simulation.Simulators
 open Microsoft.Quantum.Simulation.Core
 
+open aleph.parser.ast
+
 open aleph.qsharp
 open aleph.runtime.Eval
 open aleph.runtime.qpu.qsharp
@@ -65,7 +67,13 @@ type TestQPUQsharp () =
 
     [<TestMethod>]
     member this.TestLiteral () =
-        let ctx = this.Context
+        let ctx = 
+            this.Context
+            |> add_to_context "k" (AnyType.QType (QType.Ket [Type.Int; Type.Bool])) (u.Ket [
+                u.Tuple [ u.Int 0; u.Bool true]
+                u.Tuple [ u.Int 0; u.Bool false]
+                u.Tuple [ u.Int 1; u.Bool true]
+            ])
 
         [
             // |>
@@ -110,13 +118,26 @@ type TestQPUQsharp () =
             // |@,4>
             u.KetAll (u.Int 4),
             seq { 0..15 } |> Seq.toList |> List.map Int
+            // k
+            u.Var "k",
+            [
+                Tuple [ Int 0; Bool true]
+                Tuple [ Int 0; Bool false]
+                Tuple [ Int 1; Bool true]
+            ]
         ]
         |> List.iter (verify_expression ctx)
 
 
     [<TestMethod>]
     member this.TestJoinLiterals () =
-        let ctx = this.Context
+        let ctx = 
+            this.Context 
+            |> add_to_context "k" (AnyType.QType (QType.Ket [Type.Int; Type.Bool])) (u.Ket [
+                u.Tuple [ u.Int 0; u.Bool true]
+                u.Tuple [ u.Int 0; u.Bool false]
+                u.Tuple [ u.Int 1; u.Bool true]
+            ])
 
         [
             u.Join(u.Ket [],u.Ket []),

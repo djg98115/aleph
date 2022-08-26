@@ -82,12 +82,12 @@ type Processor(sim: IOperationFactory) =
 
     and prepare (q, ctx) =
         match q with
+        | Q.Var id -> prepare_var(id, ctx)
         | Q.Literal values -> prepare_literal (values, ctx)
         | Q.KetAll size -> prepare_ketall (size, ctx)
 
         | Q.Join (left, right) -> prepare_join(left, right, ctx)
         
-        | Q.Var _
         | Q.Equals _
         | Q.Add _
         | Q.Multiply _
@@ -103,6 +103,15 @@ type Processor(sim: IOperationFactory) =
         | Q.CallMethod  _
         | Q.Summarize _ ->
             $"Not implemented: {q}" |> Error
+
+    and prepare_var (id, ctx) =
+        match ctx.evalCtx.heap.TryFind id with
+        | Some (Value.Ket ket) ->
+            prepare_ket (ket, ctx)
+            ==> fun (registers, ctx) ->
+                (registers, ctx) |> Ok
+        | _ ->
+            $"Invalid variable: {id}. Expecting ket." |> Error
 
     and prepare_literal (values, ctx) =
         eval_classic(values, ctx.evalCtx)
