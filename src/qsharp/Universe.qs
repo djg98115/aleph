@@ -49,7 +49,9 @@ namespace aleph.qsharp {
 
         if (log.INFO_ON()) {
             Message($"[Q#] Final state after Prepare: ");
-            DumpRegister((), qubits[1..Length(qubits)-1]);
+            if (Length(qubits) > 1) {
+                DumpRegister((), qubits[1..Length(qubits)-1]);
+            }
             Message("");
         }
     }

@@ -86,9 +86,8 @@ type Processor(sim: IOperationFactory) =
         match q with
         | Q.Literal values -> prepare_literal (values, ctx)
 
-        // | Q.Join (left, right) -> prepare_join(left, right, ctx)
-        | Q.Join _
-
+        | Q.Join (left, right) -> prepare_join(left, right, ctx)
+        
         | Q.Var _
         | Q.KetAll _
         | Q.Equals _
@@ -111,18 +110,20 @@ type Processor(sim: IOperationFactory) =
         eval_classic(values, ctx.evalCtx)
         ==> fun (values, evalCtx) ->
             match values with
+            | Value.Set w when w.IsEmpty->
+                (new QArray<Register>() :> QRegisters, { ctx with evalCtx = evalCtx }) |> Ok
             | Value.Set _ ->
                 let struct (u, r) = ket.Literal.Run(sim, values |> Convert.toQSet, ctx.universe).Result
                 (r, { ctx with universe = u; evalCtx = evalCtx }) |> Ok
             | _ -> 
                 $"Invalid classic value for a ket literal: {values}" |> Error
 
-    // and prepare_join (left, right, ctx) =
-    //     prepare (left, ctx)
-    //     ==> fun (left, ctx) ->
-    //         prepare (right, ctx)
-    //         ==> fun (right, ctx) ->
-    //             (left @ right, ctx) |> Ok
+    and prepare_join (left, right, ctx) =
+        prepare (left, ctx)
+        ==> fun (left, ctx) ->
+            prepare (right, ctx)
+            ==> fun (right, ctx) ->
+                (QArray.Add(left, right) :> QRegisters, ctx) |> Ok
 
 
 

@@ -68,9 +68,10 @@ type TestQsharpCode () =
         let ctx = this.Context
 
         [
-            // u.Ket [],
-            //     []
-            // | false >
+            // |>
+            u.Ket [],
+                []
+            //| false >
             u.Ket [
                 u.Bool false
             ], [
@@ -104,6 +105,41 @@ type TestQsharpCode () =
                 Tuple [ Int 0; Bool true; Int 1 ]
                 Tuple [ Int 0; Bool true; Int 2 ]
                 Tuple [ Int 2; Bool true; Int 3 ]
+            ]
+        ]
+        |> List.iter (verify_expression ctx)
+
+
+    [<TestMethod>]
+    member this.TestJoinLiterals () =
+        let ctx = this.Context
+
+        [
+            u.Join(u.Ket [],u.Ket []),
+                []
+            // (| false >, | true> )
+            u.Join (u.Ket [u.Bool false], u.Ket [u.Bool true]),
+            [
+                Tuple [ Bool false; Bool true ]
+            ]
+            // Join (| 1; 2 >, | true >)
+            u.Join (u.Ket [u.Int 1; u.Int 2], u.Ket [u.Bool true]),
+            [
+                Tuple [ Int 1; Bool true ]
+                Tuple [ Int 2; Bool true ]
+            ]
+            // Join( | (false, false), (false, true) >, |1, 3> )
+            u.Join (
+                u.Ket [
+                    u.Tuple [ u.Bool false; u.Bool false ]
+                    u.Tuple [ u.Bool false; u.Bool true ]],
+                u.Ket [ u.Int 1; u.Int 3]),
+
+            [
+                Tuple [ Bool false; Bool false; Int 1 ]
+                Tuple [ Bool false; Bool true; Int 1 ]
+                Tuple [ Bool false; Bool false; Int 3 ]
+                Tuple [ Bool false; Bool true; Int 3 ]
             ]
         ]
         |> List.iter (verify_expression ctx)
