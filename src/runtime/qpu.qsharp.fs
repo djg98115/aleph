@@ -92,6 +92,7 @@ type Processor(sim: IOperationFactory) =
         | Q.KetAll size -> prepare_ketall (size, ctx)
 
         | Q.Project (q, index) -> prepare_project (q, index, ctx)
+        | Q.Index (q, index) -> prepare_index (q, index, ctx)
         | Q.Join (left, right) -> prepare_join(left, right, ctx)
         
         | Q.Equals _
@@ -100,7 +101,6 @@ type Processor(sim: IOperationFactory) =
         | Q.Not _
         | Q.And _
         | Q.Or _
-        | Q.Index _
         | Q.Solve  _
         | Q.Block  _
         | Q.IfQuantum  _
@@ -145,6 +145,18 @@ type Processor(sim: IOperationFactory) =
         ==> fun (registers, ctx) ->
             let i = index |> int64
             (registers.Slice(new QRange(i, i)), ctx) |> Ok
+
+    and prepare_index (q, index, ctx) =
+        prepare (q, ctx)
+        ==> fun (registers, ctx) ->
+            eval_classic (index, ctx.evalCtx)
+            ==> fun (index, evalCtx) ->
+                match index with
+                | Value.Int i ->
+                    let ctx = { ctx with evalCtx = evalCtx }
+                    let idx = i % registers.Count |> int64
+                    (registers.Slice(new QRange(idx, idx)), ctx) |> Ok
+                | _ -> $"Invalid index, expecting int value, got {index}" |> Error
 
     and prepare_join (left, right, ctx) =
         prepare (left, ctx)

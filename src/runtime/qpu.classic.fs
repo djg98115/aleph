@@ -132,7 +132,7 @@ type Processor() =
         | Or (left,right) -> prepare_or (left, right, ctx)
 
         | Project (q, index) -> prepare_project (q, index, ctx)
-        | Index (q, index) ->  prepare_index (q, index, ctx)
+        | Index (q, index) -> prepare_index (q, index, ctx)
         | Join (left, right) -> prepare_join (left, right, ctx)
         | Solve (ket, condition) -> prepare_solve (ket, condition, ctx)
         | Q.Block (stmts, value) -> prepare_block (stmts, value, ctx)

@@ -203,5 +203,14 @@ type TestQPUQsharp () =
                 Tuple [ Int 0; Bool false; Int 0; Bool false ]
                 Tuple [ Int 1; Bool true; Int 1; Bool true ]
             ]
+            // ( |@,4>, |1, 3> ).[3 - 3]
+            u.Project(u.Join(u.KetAll (u.Int 3), u.Ket [u.Int 1; u.Int 3]), u.Add (u.Int 3, u.Int -3)),
+            seq { 0..15 } |> Seq.toList |> List.map Int
+            // ( |@,4>, |1, 3> ).[0 + 1]
+            u.Project(u.Join(u.KetAll (u.Int 3), u.Ket [u.Int 1; u.Int 3]), u.Add (u.Int 0, u.Int 1)),
+            [ 
+                Int 1
+                Int 3
+            ]
         ]
         |> List.iter (verify_expression ctx)
