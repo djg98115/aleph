@@ -95,11 +95,12 @@ type Processor(sim: IOperationFactory) =
         | Q.Index (q, index) -> prepare_index (q, index, ctx)
         | Q.Join (left, right) -> prepare_join(left, right, ctx)
         
+        | Not q -> prepare_not (q, ctx)
+        | And (left,right) -> prepare_and (left, right, ctx)
+
         | Q.Equals _
         | Q.Add _
         | Q.Multiply _
-        | Q.Not _
-        | Q.And _
         | Q.Or _
         | Q.Solve  _
         | Q.Block  _
@@ -165,6 +166,27 @@ type Processor(sim: IOperationFactory) =
             ==> fun (right, ctx) ->
                 (QArray.Add(left, right) :> QRegisters, ctx) |> Ok
 
+    and prepare_not (q, ctx) =
+        prepare (q, ctx)
+        ==> fun (source, ctx) ->
+            match source.Length with
+            | 1L ->
+                ket.Not.Run(sim, source.[0], ctx.universe).Result
+                |> qsharp_result ctx
+            | _ -> 
+                $"Invalid inputs for ket not. Expected one length registers, got:: {source.Length}" |> Error
+
+    and prepare_and (left, right, ctx) =
+        prepare (left, ctx)
+        ==> fun (left, ctx) ->
+            prepare (right, ctx)
+            ==> fun (right, ctx) ->
+                match (left.Length, right.Length) with
+                | (1L, 1L) ->
+                    ket.And.Run(sim, left.[0], right.[0], ctx.universe).Result
+                    |> qsharp_result ctx
+                | _ -> 
+                    $"Invalid inputs for ket And. Expected one length registers, got: left:{left.Length} && right:{right.Length}" |> Error
 
 
     and qsharp_result ctx value =

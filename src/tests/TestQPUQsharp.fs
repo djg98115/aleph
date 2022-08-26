@@ -214,3 +214,61 @@ type TestQPUQsharp () =
             ]
         ]
         |> List.iter (verify_expression ctx)
+
+
+    [<TestMethod>]
+    member this.TestBoolExpressions () =
+        let ctx = 
+            this.Context
+            |> add_to_context "k1" (AnyType.QType (QType.Ket [Type.Bool])) (u.Ket [
+                u.Bool true
+                u.Bool false
+            ])
+            |> add_to_context "k2" (AnyType.QType (QType.Ket [Type.Bool])) (u.Ket [
+                u.Bool true
+                u.Bool false
+            ])
+            |> add_to_context "k3" (AnyType.QType (QType.Ket [Type.Int; Type.Bool; Type.Bool])) (u.Ket [
+                u.Tuple [u.Int 0; u.Bool true; u.Bool true ]
+                u.Tuple [u.Int 1; u.Bool false; u.Bool true ]
+                u.Tuple [u.Int 2; u.Bool true; u.Bool false ]
+            ])
+
+        [
+            // ((k1, k2), (k1 && k2))
+            u.Join(
+                u.Join(u.Var "k1", u.Var "k2"),
+                u.And(u.Var "k1", u.Var "k2")),
+            [
+                Tuple [ Bool false; Bool false; Bool false ]
+                Tuple [ Bool false; Bool true; Bool false ]
+                Tuple [ Bool true; Bool false; Bool false ]
+                Tuple [ Bool true; Bool true; Bool true ]
+            ]
+            // (k3.0, k3.1 && k3.2)
+            u.Join(
+                u.Project(u.Var "k3", u.Int 0),
+                u.And(
+                    u.Project(u.Var "k3", u.Int 1),
+                    u.Project(u.Var "k3", u.Int 2))),
+            [
+                Tuple [ Int 0; Bool true ]
+                Tuple [ Int 1; Bool false ]
+                Tuple [ Int 2; Bool false ]
+            ]
+
+            // (k3.0, !(k3.1 && k3.2))
+            u.Join(
+                u.Project(u.Var "k3", u.Int 0),
+                u.Not(
+                    u.And(
+                        u.Project(u.Var "k3", u.Int 1),
+                        u.Project(u.Var "k3", u.Int 2)))),
+            [
+                Tuple [ Int 0; Bool false ]
+                Tuple [ Int 1; Bool true ]
+                Tuple [ Int 2; Bool true ]
+            ]
+        ]
+        |> List.iter (verify_expression ctx)
+
