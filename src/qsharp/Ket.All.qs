@@ -14,20 +14,9 @@ namespace aleph.qsharp.ket {
         let end = start + size - 1;
         let output = [Register(start..end)];
 
-        let oracle = _All_oracle(oldOracle, _, _);
-        let universe = Universe(oldRows, oldColumns + size, oracle);
+        let universe = Universe(oldRows, oldColumns + size, oldOracle);
 
         log.Info($"Ket.All::Init --> size: {size}");
         return (universe, output);
-    }
-
-    operation _All_oracle(
-        previous: (Qubit[], Qubit) => Unit is Adj + Ctl,
-        all: Qubit[], target: Qubit) : Unit
-    is Adj + Ctl {
-        log.Debug($"Ket.All::oracle --> target:{target}");
-
-        // Just call previous oracle
-        previous(all, target);
     }
 }
