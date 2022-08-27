@@ -91,12 +91,15 @@ type Processor(sim: IOperationFactory) =
         | Q.Literal values -> prepare_literal (values, ctx)
         | Q.KetAll size -> prepare_ketall (size, ctx)
 
+        | Q.Not q -> prepare_not (q, ctx)
+        | Q.And (left,right) -> prepare_and (left, right, ctx)
+
         | Q.Project (q, index) -> prepare_project (q, index, ctx)
         | Q.Index (q, index) -> prepare_index (q, index, ctx)
-        | Q.Join (left, right) -> prepare_join(left, right, ctx)
-        
-        | Not q -> prepare_not (q, ctx)
-        | And (left,right) -> prepare_and (left, right, ctx)
+        | Q.Join (left, right) -> prepare_join(left, right, ctx)        
+        | Q.Block (stmts, value) -> prepare_block (stmts, value, ctx)
+
+        | Q.CallMethod (method, args) ->  prepare_callmethod(method, args, ctx)
 
         | Q.Equals _
         | Q.Add _
@@ -106,7 +109,6 @@ type Processor(sim: IOperationFactory) =
         | Q.Block  _
         | Q.IfQuantum  _
         | Q.IfClassic  _
-        | Q.CallMethod  _
         | Q.Summarize _ ->
             $"Not implemented: {q}" |> Error
 
@@ -188,6 +190,21 @@ type Processor(sim: IOperationFactory) =
                 | _ -> 
                     $"Invalid inputs for ket And. Expected one length registers, got: left:{left.Length} && right:{right.Length}" |> Error
 
+    and prepare_block (stmts, value, ctx) =
+        eval_stmts (stmts, ctx.evalCtx)
+        ==> fun evalCtx ->
+            let ctx = { ctx with evalCtx = evalCtx }
+            prepare (value, ctx)
+
+    and prepare_callmethod (method, args, ctx) =
+        eval_callmethod(method, args, ctx.evalCtx)
+        ==> fun (value, evalCtx) ->
+            match value with
+            | Value.Ket k -> 
+                let ctx = { ctx with evalCtx = evalCtx }
+                prepare_ket (k, ctx)
+            | _ ->
+                $"Expecting a Ket result, got {value}" |> Error
 
     and qsharp_result ctx value =
         let struct (u, r) = value

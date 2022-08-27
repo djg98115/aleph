@@ -272,3 +272,41 @@ type TestQPUQsharp () =
         ]
         |> List.iter (verify_expression ctx)
 
+
+    [<TestMethod>]
+    member this.TestCallMethod () =
+        let ctx = this.Context
+
+        [
+            // let colors() = |1,2,3>
+            // colors()
+            u.Block (
+                [
+                    Let ("colors", u.Method([], u.Ket [u.Int 1; u.Int 2; u.Int 3]))
+                ],
+                u.CallMethod (u.Var "colors", [])),
+            [
+                Int 1
+                Int 2
+                Int 3
+            ]
+            // let colors() = |1,2,3>
+            // ( colors(), colors() )
+            u.Block (
+                [
+                    Let ("colors", u.Method([], u.Ket [u.Int 1; u.Int 2; u.Int 3]))
+                ],
+                u.Join (u.CallMethod (u.Var "colors", []), u.CallMethod (u.Var "colors", []))),
+            [
+                Tuple [ Int 1; Int 1 ]
+                Tuple [ Int 1; Int 2 ]
+                Tuple [ Int 1; Int 3 ]
+                Tuple [ Int 2; Int 1 ]
+                Tuple [ Int 2; Int 2 ]
+                Tuple [ Int 2; Int 3 ]
+                Tuple [ Int 3; Int 1 ]
+                Tuple [ Int 3; Int 2 ]
+                Tuple [ Int 3; Int 3 ]
+            ]
+        ]
+        |> List.iter (verify_expression ctx)
