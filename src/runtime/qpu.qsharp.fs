@@ -91,6 +91,8 @@ type Processor(sim: IOperationFactory) =
         | Q.Literal values -> prepare_literal (values, ctx)
         | Q.KetAll size -> prepare_ketall (size, ctx)
 
+        | Q.Equals (left, right) -> prepare_equals (left, right, ctx)
+
         | Q.Not q -> prepare_not (q, ctx)
         | Q.And (left,right) -> prepare_and (left, right, ctx)
 
@@ -101,7 +103,6 @@ type Processor(sim: IOperationFactory) =
 
         | Q.CallMethod (method, args) ->  prepare_callmethod(method, args, ctx)
 
-        | Q.Equals _
         | Q.Add _
         | Q.Multiply _
         | Q.Or _
@@ -190,6 +191,19 @@ type Processor(sim: IOperationFactory) =
                 | _ -> 
                     $"Invalid inputs for ket And. Expected one length registers, got: left:{left.Length} && right:{right.Length}" |> Error
 
+
+    and prepare_equals (left, right, ctx) =
+        prepare (left, ctx)
+        ==> fun (left, ctx) ->
+            prepare (right, ctx)
+            ==> fun (right, ctx) ->
+                match (left.Length, right.Length) with
+                | (1L, 1L) ->
+                    ket.Equals.Run(sim, left.[0], right.[0], ctx.universe).Result
+                    |> qsharp_result ctx
+                | _ -> 
+                    $"Invalid inputs for ket And. Expected one length registers, got: left:{left.Length} && right:{right.Length}" |> Error
+                    
     and prepare_block (stmts, value, ctx) =
         eval_stmts (stmts, ctx.evalCtx)
         ==> fun evalCtx ->

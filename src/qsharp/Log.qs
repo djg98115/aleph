@@ -8,7 +8,7 @@ namespace aleph.qsharp.log
     }
 
     function DEBUG_ON() : Bool {
-        return false;
+        return true;
     }
 
     function Info(msg: String) : Unit {

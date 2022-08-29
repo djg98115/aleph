@@ -38,8 +38,13 @@ namespace aleph.qsharp.ket {
         within {
             previous(all, t1);
 
+            // a1 hold true if left ^ right
             Controlled X (all[left!] + all[right!], a1);
+
+            // the true cases
             Controlled X ([a1, answer], t2);
+
+            // the false cases
             X(a1);
             X(answer);
             Controlled X ([a1, answer], t2);

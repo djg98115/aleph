@@ -1,7 +1,7 @@
 
 module Utils
     open aleph.runtime.Eval
-    open aleph.runtime.qpu.classic
+    open Microsoft.Quantum.Simulation.Simulators
 
     let run qpu program =
         let context = { 
@@ -18,5 +18,7 @@ module Utils
         printfn "ℵ:aleph (v0.3)"
         0
 
-    let simulate program = program |> run (Processor())
+    let simulate program = program |> run (aleph.runtime.qpu.classic.Processor())
+
+    let execute program = program |> run (aleph.runtime.qpu.qsharp.Processor(new QuantumSimulator()))
 
