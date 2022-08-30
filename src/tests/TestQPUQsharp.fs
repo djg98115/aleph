@@ -146,6 +146,8 @@ type TestQPUQsharp () =
                 u.Tuple [ u.Int 0; u.Bool false]
                 u.Tuple [ u.Int 1; u.Bool true]
             ])
+            |> add_to_context "all_1" (AnyType.QType (QType.Ket [Type.Int])) (u.KetAll (u.Int 2))
+            |> add_to_context "all_2" (AnyType.QType (QType.Ket [Type.Int])) (u.KetAll (u.Int 2))
 
         [
             u.Join(u.Ket [],u.Ket []),
@@ -208,6 +210,16 @@ type TestQPUQsharp () =
                 Int 1
                 Int 3
             ]
+            // let all_1, all_2 = |@,2>; 
+            // (all_1, all_2, all_1 == all_2)
+            Join(
+                Join(Var "all_1", Var "all_2"),
+                Equals(Var "all_1", Var "all_2")),
+            seq { 
+                for i in 0..15 do 
+                    for j in 0..15 -> 
+                        Tuple [ Int i; Int j; Bool (i = j)]
+            } |> Seq.toList
         ]
         |> List.iter (verify_expression ctx)
 
