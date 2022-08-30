@@ -12,15 +12,9 @@ open aleph.parser.ast.typed
 open aleph.runtime.Eval
 
 
-type QsharpContext = {
-    allocations: Map<int, QRegisters>
-    universe: QUniverse
-    evalCtx: EvalContext
-}
-
 module Convert =
     let BOOL_REGISTER_SIZE = 1
-    let INT_REGISTER_DEFAULT_SIZE = 2
+    let INT_REGISTER_DEFAULT_SIZE = 3
 
     let toQValue = function
         | Bool b -> new QValue((if b then (1,BOOL_REGISTER_SIZE) else (0,BOOL_REGISTER_SIZE)))
@@ -55,6 +49,12 @@ module Convert =
             one result.[0]
         else
             Tuple (result |> Seq.map one |> Seq.toList)
+
+type QsharpContext = {
+    allocations: Map<int, QRegisters>
+    universe: QUniverse
+    evalCtx: EvalContext
+}
 
 type Universe(sim: IOperationFactory, state: QUniverse, registers: QRegisters) =
     let mutable value = None

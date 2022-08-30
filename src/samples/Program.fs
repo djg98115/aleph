@@ -3,10 +3,9 @@ let main argv =
 
     let programs = 
         [
-            Sandbox.program
+            //Sandbox.program
             // CoinFlip.program
-            // DiceRoll.program
-            // DiceRoll.program
+            DiceRoll.program
             // SolveEquation.program
             // GraphColoring.program
         ]
