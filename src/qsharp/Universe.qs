@@ -10,7 +10,7 @@ namespace aleph.qsharp {
     open aleph.qsharp.log as log;
 
     function BigBang(): Universe {
-        return Universe(0, 1, _tracker(_, _));
+        return Universe(1, 1, _tracker(_, _));
     }
     
     operation Sample(universe: Universe, register: Register[]) : Value[] {

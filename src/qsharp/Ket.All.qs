@@ -14,7 +14,9 @@ namespace aleph.qsharp.ket {
         let end = start + size - 1;
         let output = [Register(start..end)];
 
-        let universe = Universe(oldRows, oldColumns + size, oldOracle);
+        let rows = oldRows * (1 <<< size);
+
+        let universe = Universe(rows, oldColumns + size, oldOracle);
 
         log.Info($"Ket.All::Init --> size: {size}");
         return (universe, output);

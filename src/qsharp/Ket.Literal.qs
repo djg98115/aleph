@@ -19,9 +19,7 @@ namespace aleph.qsharp.ket {
             set start = start + size;
         }
 
-        let rows = oldRows == 0 
-            ? Length(classic)
-            | oldRows * Length(classic);
+        let rows = oldRows * Length(classic);
         let columns = start;
 
         let oracle = _Literal_oracle(classic, output, oldColumns, start-1, oldOracle, _, _);
