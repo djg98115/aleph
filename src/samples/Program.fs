@@ -12,5 +12,5 @@ let main argv =
         ]
     
     programs 
-    |> List.map Utils.execute
+    |> List.map Utils.trace
     |> List.sum
