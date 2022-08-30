@@ -95,6 +95,7 @@ type Processor(sim: IOperationFactory) =
 
         | Q.Not q -> prepare_not (q, ctx)
         | Q.And (left,right) -> prepare_and (left, right, ctx)
+        | Q.Or (left,right) -> prepare_or (left, right, ctx)
 
         | Q.Project (q, index) -> prepare_project (q, index, ctx)
         | Q.Index (q, index) -> prepare_index (q, index, ctx)
@@ -105,7 +106,6 @@ type Processor(sim: IOperationFactory) =
 
         | Q.Add _
         | Q.Multiply _
-        | Q.Or _
         | Q.Solve  _
         | Q.Block  _
         | Q.IfQuantum  _
@@ -191,6 +191,18 @@ type Processor(sim: IOperationFactory) =
                 | _ -> 
                     $"Invalid inputs for ket And. Expected one length registers, got: left:{left.Length} && right:{right.Length}" |> Error
 
+
+    and prepare_or (left, right, ctx) =
+        prepare (left, ctx)
+        ==> fun (left, ctx) ->
+            prepare (right, ctx)
+            ==> fun (right, ctx) ->
+                match (left.Length, right.Length) with
+                | (1L, 1L) ->
+                    ket.Or.Run(sim, left.[0], right.[0], ctx.universe).Result
+                    |> qsharp_result ctx
+                | _ -> 
+                    $"Invalid inputs for ket And. Expected one length registers, got: left:{left.Length} && right:{right.Length}" |> Error
 
     and prepare_equals (left, right, ctx) =
         prepare (left, ctx)

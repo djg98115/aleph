@@ -253,6 +253,16 @@ type TestQPUQsharp () =
                 Tuple [ Bool true; Bool false; Bool false ]
                 Tuple [ Bool true; Bool true; Bool true ]
             ]
+            // ((k1, k2), (k1 || k2))
+            u.Join(
+                u.Join(u.Var "k1", u.Var "k2"),
+                u.Or(u.Var "k1", u.Var "k2")),
+            [
+                Tuple [ Bool false; Bool false; Bool false ]
+                Tuple [ Bool false; Bool true; Bool true ]
+                Tuple [ Bool true; Bool false; Bool true ]
+                Tuple [ Bool true; Bool true; Bool true ]
+            ]
             // (k3.0, k3.1 && k3.2)
             u.Join(
                 u.Project(u.Var "k3", u.Int 0),
